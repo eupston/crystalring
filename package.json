@@ -6,6 +6,8 @@
     "build": "concurrently \"yarn build:main\" \"yarn build:renderer\"",
     "build:main": "cross-env NODE_ENV=production webpack --config ./.erb/configs/webpack.config.main.prod.babel.js",
     "build:renderer": "cross-env NODE_ENV=production webpack --config ./.erb/configs/webpack.config.renderer.prod.babel.js",
+    "build:proto": "sh build.sh",
+    "build:server": "export GO111MODULE=\"on\" \n go mod download",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir src",
     "lint": "cross-env NODE_ENV=development eslint . --cache --ext .js,.jsx,.ts,.tsx",
     "package": "rm -rf src/dist && yarn build && electron-builder build --publish never",
@@ -13,6 +15,7 @@
     "start": "node -r @babel/register ./.erb/scripts/CheckPortInUse.js && cross-env yarn start:renderer",
     "start:main": "cross-env NODE_ENV=development electron -r ./.erb/scripts/BabelRegister ./src/main.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development webpack serve --config ./.erb/configs/webpack.config.renderer.dev.babel.js",
+    "start:server": "go run server/server.go",
     "test": "jest"
   },
   "lint-staged": {
@@ -166,6 +169,7 @@
     "@testing-library/react": "^11.2.2",
     "@types/enzyme": "^3.10.5",
     "@types/enzyme-adapter-react-16": "^1.0.6",
+    "@types/google-protobuf": "^3.7.4",
     "@types/history": "4.7.6",
     "@types/jest": "^26.0.15",
     "@types/node": "14.14.10",
@@ -212,6 +216,9 @@
     "eslint-plugin-react": "^7.20.6",
     "eslint-plugin-react-hooks": "^4.0.8",
     "file-loader": "^6.0.0",
+    "grpc": "^1.24.6",
+    "grpc-tools": "^1.11.0",
+    "grpc_tools_node_protoc_ts": "^5.1.3",
     "husky": "^4.2.5",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^26.1.0",
@@ -251,9 +258,6 @@
     "node": ">=10.x",
     "npm": ">=6.x",
     "yarn": ">=1.21.3"
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "browserslist": [],
   "prettier": {

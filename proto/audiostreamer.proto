@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package audiostreamer;
+
+option go_package = "./audiostreamer";
+
+service AudioStream {
+  rpc AudioStream (stream AudioSample) returns (stream AudioSample);
+}
+
+message AudioSample {
+  string Timestamp = 1;
+  bytes Data = 2;
+  float GainAmt = 3;
+}
