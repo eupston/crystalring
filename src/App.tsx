@@ -1,18 +1,25 @@
-import React from 'react';
+import React, { Component } from 'react';
 import './App.global.css';
-import GainSlider from "./Components/GainSlider/GainSlider"
+import GainSlider from './Components/GainSlider/GainSlider';
+import startAudioStream from './Utils/audiostreamer';
 
 const { ipcRenderer } = window.require('electron');
 
 function testIPC() {
   ipcRenderer.invoke('perform-action', ['Test from renderer']);
 }
-export default function App() {
-  return (
-    <div className="App">
-      <GainSlider/>
-      {testIPC()}
-      <h2 style={{color:"white"}}>Gain Amount</h2>
-    </div>
-  );
+
+class App extends Component {
+  render() {
+    return (
+      <div className="App">
+        <GainSlider />
+        {testIPC()}
+        <h2 style={{ color: 'white' }}>Gain Amount</h2>
+        <button onClick={startAudioStream}>Start Stream</button>
+      </div>
+    );
+  }
 }
+
+export default App;

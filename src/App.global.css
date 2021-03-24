@@ -6,10 +6,12 @@ body {
   position: relative;
   color: white;
   height: 100vh;
-  background: #282c34;;
+  background: #282c34;
   font-family: sans-serif;
   overflow-y: hidden;
   display: flex;
+  flex-direction: column;
+
   justify-content: center;
   align-items: center;
 }
