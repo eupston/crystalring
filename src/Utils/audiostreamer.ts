@@ -46,4 +46,4 @@ const startAudioStream = () => {
   micstream.start();
 };
 
-export default startAudioStream;
+module.exports = { startAudioStream };

@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import './App.global.css';
 import GainSlider from './Components/GainSlider/GainSlider';
-import startAudioStream from './Utils/audiostreamer';
 
 const { ipcRenderer } = window.require('electron');
 

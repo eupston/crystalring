@@ -15,6 +15,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
+const { startAudioStream } = require('./Utils/audiostreamer');
 
 export default class AppUpdater {
   constructor() {
