@@ -79,9 +79,10 @@ const createWindow = async () => {
     },
   });
 
-  ipcMain.handle('perform-action', (event, ...args) => {
+  ipcMain.handle('startaudiostream', (event, ...args) => {
     // ... do actions on behalf of the Renderer
     console.info('Handling from renderer with args ', event, args);
+    startAudioStream();
   });
 
   mainWindow.loadURL(`file://${__dirname}/index.html`);

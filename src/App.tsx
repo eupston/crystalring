@@ -4,8 +4,8 @@ import GainSlider from './Components/GainSlider/GainSlider';
 
 const { ipcRenderer } = window.require('electron');
 
-function testIPC() {
-  ipcRenderer.invoke('perform-action', ['Test from renderer']);
+function startaudiostream() {
+  ipcRenderer.invoke('startaudiostream', ['startaudiostream']);
 }
 
 class App extends Component {
@@ -13,9 +13,8 @@ class App extends Component {
     return (
       <div className="App">
         <GainSlider />
-        {testIPC()}
         <h2 style={{ color: 'white' }}>Gain Amount</h2>
-        <button onClick={startAudioStream}>Start Stream</button>
+        <button onClick={startaudiostream}>Start Stream</button>
       </div>
     );
   }
