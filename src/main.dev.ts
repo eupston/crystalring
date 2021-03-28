@@ -15,7 +15,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
-const { startAudioStream } = require('./Utils/audiostreamer');
+const { startAudioStream, stopAudioStream } = require('./Utils/audiostreamer');
 
 export default class AppUpdater {
   constructor() {
@@ -79,12 +79,6 @@ const createWindow = async () => {
     },
   });
 
-  ipcMain.handle('startaudiostream', (event, ...args) => {
-    // ... do actions on behalf of the Renderer
-    console.info('Handling from renderer with args ', event, args);
-    startAudioStream();
-  });
-
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // @TODO: Use 'ready-to-show' event
@@ -137,4 +131,12 @@ app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) createWindow();
+});
+
+ipcMain.on('start-audio-stream', () => {
+  startAudioStream();
+});
+
+ipcMain.on('stop-audio-stream', () => {
+  stopAudioStream();
 });
