@@ -7,7 +7,7 @@
     "build:main": "cross-env NODE_ENV=production webpack --config ./.erb/configs/webpack.config.main.prod.babel.js",
     "build:renderer": "cross-env NODE_ENV=production webpack --config ./.erb/configs/webpack.config.renderer.prod.babel.js",
     "build:proto": "sh build.sh",
-    "build:server": "yarn build:goModuleON && yarn build:downloadGOMods",
+    "build:server": "cross-env-shell GO111MODULE=on go mod download",
     "build:goModuleON": "export GO111MODULE=on",
     "build:downloadGOMods": "go mod download",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir src",

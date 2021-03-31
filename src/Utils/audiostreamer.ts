@@ -7,19 +7,15 @@ import { client } from './client';
 
 let micStream: IoStreamRead | null;
 let outputStream: Speaker | null;
-let clientStream: ClientDuplexStream<
-  AudioSample,
-  AudioSample
-> = client.audioStream();
+let clientStream: ClientDuplexStream<AudioSample, AudioSample> | null;
 
 const reloadAudioIOStream = () => {
-  console.info('micstream: ', micStream);
-  console.info('outputStream: ', outputStream);
   if (micStream && outputStream) return;
   initializeAudioIOStream();
 };
 
 const initializeAudioIOStream = () => {
+  clientStream = client.audioStream();
   micStream = AudioIO({
     inOptions: {
       channelCount: 1,
