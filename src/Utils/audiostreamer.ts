@@ -8,6 +8,7 @@ import { client } from './client';
 let micStream: IoStreamRead | null;
 let outputStream: Speaker | null;
 let clientStream: ClientDuplexStream<AudioSample, AudioSample> | null;
+let gainAmt: number = 1.0;
 
 const reloadAudioIOStream = () => {
   if (micStream && outputStream) return;
@@ -39,7 +40,7 @@ const initializeAudioIOStream = () => {
   let sample = new AudioSample();
   micStream.on('data', (data: Uint8Array) => {
     sample.setData(data);
-    sample.setGainamt(2.0);
+    sample.setGainamt(gainAmt);
     sample.setTimestamp(new Date().getMilliseconds().toString());
     clientStream.write(sample);
   });
@@ -50,6 +51,7 @@ const initializeAudioIOStream = () => {
     stopAudioStream();
   });
 
+  //TODO handle errors when server not reachable
   //When servers sends back data pipe to the speaker
   clientStream.on('data', (sample: AudioSample) => {
     let sampleData = sample.getData();
@@ -77,9 +79,14 @@ const stopAudioStream = () => {
   }
 };
 
+const setGainAmount = (gainamount: number) => {
+  gainAmt = gainamount;
+};
+
 module.exports = {
   startAudioStream,
   stopAudioStream,
   initializeAudioIOStream,
   reloadAudioIOStream,
+  setGainAmount,
 };

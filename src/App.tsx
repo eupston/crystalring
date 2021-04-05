@@ -11,10 +11,15 @@ class App extends Component {
   stopaudiostream = () => {
     ipcRenderer.send('stop-audio-stream');
   };
+
+  onGainChangeHandler = (gainAmt: number) => {
+    ipcRenderer.send('set-gain-amount', gainAmt);
+  };
+
   render() {
     return (
       <div className="App">
-        <GainSlider />
+        <GainSlider setGainAmount={this.onGainChangeHandler} />
         <h2 style={{ color: 'white' }}>Gain Amount</h2>
         <div className="buttons">
           <button onClick={() => this.startaudiostream()}>Start Stream</button>

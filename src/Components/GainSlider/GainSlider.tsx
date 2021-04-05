@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 // @ts-ignore
 import { CircleSlider } from 'react-circle-slider';
 
-const GainSlider = () => {
+interface Props {
+  setGainAmount: Function;
+}
+
+const GainSlider = (props: Props) => {
   const [gain, setGain] = useState(1);
 
-  useEffect(() => {}, [gain]);
+  useEffect(() => {
+    props.setGainAmount(gain);
+  }, [gain]);
 
   return (
     <CircleSlider

@@ -15,7 +15,11 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
-const { startAudioStream, stopAudioStream } = require('./Utils/audiostreamer');
+const {
+  startAudioStream,
+  stopAudioStream,
+  setGainAmount,
+} = require('./Utils/audiostreamer');
 
 export default class AppUpdater {
   constructor() {
@@ -139,4 +143,8 @@ ipcMain.on('start-audio-stream', () => {
 
 ipcMain.on('stop-audio-stream', () => {
   stopAudioStream();
+});
+
+ipcMain.on('set-gain-amount', (_event, gainAmt: number) => {
+  setGainAmount(gainAmt);
 });
