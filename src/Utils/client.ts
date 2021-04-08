@@ -7,5 +7,3 @@ export const client = new AudioStreamClient(
   `localhost:${port}`,
   credentials.createInsecure()
 );
-
-export const noop = () => {};

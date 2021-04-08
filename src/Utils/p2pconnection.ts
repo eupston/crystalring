@@ -28,26 +28,45 @@ const servers = {
 };
 
 let callId: string = null;
-const pc = new RTCPeerConnection(servers);
+const pc = new wrtc.RTCPeerConnection(servers);
 
 // 2. Create an offer
-const call = async () => {
+export const call = async () => {
+  //Need to add dummy stream to initiate ice candidate generation
+  const localStream = await wrtc.getUserMedia({
+    video: true,
+    audio: false,
+  });
+
+  localStream.getTracks().forEach((track: MediaStreamTrack) => {
+    pc.addTrack(track, localStream);
+  });
+
   // Reference Firestore collections for signaling
   const callDoc = firestore.collection('calls').doc();
   const offerCandidates = callDoc.collection('offerCandidates');
   const answerCandidates = callDoc.collection('answerCandidates');
 
   callId = callDoc.id;
+  console.info(callId);
 
   // Get candidates for caller, save to db
-  pc.onicecandidate = (event: {
-    candidate: { toJSON: () => firebase.firestore.DocumentData };
-  }) => {
-    event.candidate && offerCandidates.add(event.candidate.toJSON());
+  pc.onicecandidate = (event: { candidate: RTCIceCandidate }) => {
+    if (event.candidate) {
+      const jsonCandidate = {
+        candidate: event.candidate.candidate,
+        sdpMLineIndex: event.candidate.sdpMLineIndex,
+        sdpMid: event.candidate.sdpMid,
+      };
+      offerCandidates.add(jsonCandidate);
+    }
   };
 
   // Create offer
-  const offerDescription = await pc.createOffer();
+  const offerDescription = await pc.createOffer({
+    offerToReceiveAudio: false,
+    offerToReceiveVideo: false,
+  });
   await pc.setLocalDescription(offerDescription);
   const offer = {
     sdp: offerDescription.sdp,
@@ -59,7 +78,7 @@ const call = async () => {
   callDoc.onSnapshot((snapshot) => {
     const data = snapshot.data();
     if (!pc.currentRemoteDescription && data?.answer) {
-      const answerDescription = new RTCSessionDescription(data.answer);
+      const answerDescription = new wrtc.RTCSessionDescription(data.answer);
       pc.setRemoteDescription(answerDescription);
     }
   });
@@ -68,7 +87,7 @@ const call = async () => {
   answerCandidates.onSnapshot((snapshot) => {
     snapshot.docChanges().forEach((change) => {
       if (change.type === 'added') {
-        const candidate = new RTCIceCandidate(change.doc.data());
+        const candidate = new wrtc.RTCIceCandidate(change.doc.data());
         pc.addIceCandidate(candidate);
       }
     });
@@ -76,21 +95,27 @@ const call = async () => {
 };
 
 // 3. Answer the call with the unique ID
-const answer = async () => {
+export const answer = async (callId: string) => {
   const callDoc = firestore.collection('calls').doc(callId);
   const answerCandidates = callDoc.collection('answerCandidates');
   const offerCandidates = callDoc.collection('offerCandidates');
-  pc.onicecandidate = (event: {
-    candidate: { toJSON: () => firebase.firestore.DocumentData };
-  }) => {
-    event.candidate && answerCandidates.add(event.candidate.toJSON());
+
+  pc.onicecandidate = (event: { candidate: RTCIceCandidate }) => {
+    if (event.candidate) {
+      const jsonCandidate = {
+        candidate: event.candidate.candidate,
+        sdpMLineIndex: event.candidate.sdpMLineIndex,
+        sdpMid: event.candidate.sdpMid,
+      };
+      answerCandidates.add(jsonCandidate);
+    }
   };
   const callData = (await callDoc.get()).data();
   const offerDescription = callData.offer;
+
   await pc.setRemoteDescription(
     new wrtc.RTCSessionDescription(offerDescription)
   );
-
   const answerDescription = await pc.createAnswer();
   await pc.setLocalDescription(answerDescription);
 
@@ -105,15 +130,8 @@ const answer = async () => {
     snapshot.docChanges().forEach((change) => {
       if (change.type === 'added') {
         let data = change.doc.data();
-        pc.addIceCandidate(new RTCIceCandidate(data));
+        pc.addIceCandidate(new wrtc.RTCIceCandidate(data));
       }
     });
   });
 };
-
-const main = async () => {
-  await call();
-  await answer();
-};
-
-main();
