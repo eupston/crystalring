@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net"
+	"flag"
+	"fmt"
 
 	pb "github.com/eupston/gRPC-Audio-Streaming-App/proto"
 	"github.com/eupston/gRPC-Audio-Streaming-App/server/services/audiostreamer"
@@ -10,10 +12,15 @@ import (
 )
 
 func main() {
-	PORT := "9000"
-	lis, err := net.Listen("tcp", ":"+PORT)
+  PORT := flag.String("port", "9000", "Port to listen on.")
+  IP := flag.String("ip", "0.0.0.0", "IP to listen on")
+  flag.Parse()
+  fmt.Println("PORT:", *PORT)
+  fmt.Println("IP:", *IP)
+
+	lis, err := net.Listen(*IP, ":" + *PORT)
 	if err != nil {
-		log.Fatalf("Failed to listen on port " + PORT)
+		log.Fatalf("Failed to listen on port " + *PORT)
 	}
 
 	s := audiostreamer.Server{}
@@ -21,8 +28,8 @@ func main() {
 
 	pb.RegisterAudioStreamServer(grpcServer, &s)
 
-	log.Printf("Listening on port " + PORT)
+	log.Printf("Listening on port " + *PORT)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve grpc services over port " + PORT)
+		log.Fatalf("failed to serve grpc services over port " + *PORT)
 	}
 }

@@ -3,7 +3,9 @@ import { ClientDuplexStream } from '@grpc/grpc-js';
 import { AudioIO, IoStreamRead, SampleFormat16Bit } from 'naudiodon';
 import Speaker from 'speaker';
 
-import { client } from './client';
+import { initializeClient } from './client';
+
+const client = initializeClient('9000', '0.0.0.0');
 
 let micStream: IoStreamRead | null;
 let outputStream: Speaker | null;

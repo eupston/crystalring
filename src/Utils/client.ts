@@ -1,9 +1,7 @@
 import { AudioStreamClient } from '../../proto/audiostreamer_grpc_pb';
 import { credentials } from '@grpc/grpc-js';
 
-const port = 9000;
-
-export const client = new AudioStreamClient(
-  `localhost:${port}`,
-  credentials.createInsecure()
-);
+export const initializeClient = (port: string, IP: string) => {
+  const bindingAddress = `${IP}:${port}`;
+  return new AudioStreamClient(bindingAddress, credentials.createInsecure());
+};

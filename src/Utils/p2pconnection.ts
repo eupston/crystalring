@@ -59,6 +59,10 @@ export const call = async () => {
         sdpMid: event.candidate.sdpMid,
       };
       offerCandidates.add(jsonCandidate);
+      //TODO Initialize GRPC GO Server on first candidate with cmd args
+      // @ts-ignore
+      console.info(event.candidate.address);
+      console.info(event.candidate.port);
     }
   };
 
