@@ -15,11 +15,8 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
-const {
-  startAudioStream,
-  stopAudioStream,
-  setGainAmount,
-} = require('./Utils/audiostreamer');
+const { Audiostreamer } = require('./network/audiostreamer');
+const { P2PConnection } = require('./network/p2pconnection');
 
 export default class AppUpdater {
   constructor() {
@@ -30,6 +27,7 @@ export default class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let audiostreamer: InstanceType<typeof Audiostreamer> | null = null;
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -137,14 +135,27 @@ app.on('activate', () => {
   if (mainWindow === null) createWindow();
 });
 
+ipcMain.on('call', async () => {
+  const p2pconnection = new P2PConnection();
+  await p2pconnection.call();
+  audiostreamer = new Audiostreamer(p2pconnection.getGRPCClient());
+});
+
+ipcMain.on('answer', async (_event, callId: string) => {
+  const p2pconnection = new P2PConnection();
+  await p2pconnection.answer(callId);
+  //TODO look into starting another electron app on different port
+  audiostreamer = new Audiostreamer(p2pconnection.getGRPCClient());
+});
+
 ipcMain.on('start-audio-stream', () => {
-  startAudioStream();
+  audiostreamer.startAudioStream();
 });
 
 ipcMain.on('stop-audio-stream', () => {
-  stopAudioStream();
+  audiostreamer.stopAudioStream();
 });
 
 ipcMain.on('set-gain-amount', (_event, gainAmt: number) => {
-  setGainAmount(gainAmt);
+  audiostreamer.setGainAmount(gainAmt);
 });

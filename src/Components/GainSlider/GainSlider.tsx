@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // @ts-ignore
 import { CircleSlider } from 'react-circle-slider';
 
@@ -8,9 +8,13 @@ interface Props {
 
 const GainSlider = (props: Props) => {
   const [gain, setGain] = useState(1);
+  const firstRender = useRef(true);
 
   useEffect(() => {
-    props.setGainAmount(gain);
+    if (!firstRender.current) {
+      props.setGainAmount(gain);
+      firstRender.current = false;
+    }
   }, [gain]);
 
   return (
