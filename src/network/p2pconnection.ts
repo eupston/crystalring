@@ -1,6 +1,6 @@
 import firebase from 'firebase/app';
 import 'firebase/firestore';
-import { initializeClient } from './client';
+import { initializeRemoteClient, initializeLocalClient } from './client';
 import { AudioStreamClient } from '../../proto/audiostreamer_grpc_pb';
 const wrtc = require('wrtc');
 const { spawn } = require('child_process');
@@ -8,7 +8,8 @@ require('dotenv').config();
 
 export class P2PConnection {
   private signalServer: firebase.firestore.Firestore;
-  private client: AudioStreamClient;
+  private remoteClient: AudioStreamClient;
+  private localClient: AudioStreamClient;
   private callId: string;
   private pc: RTCPeerConnection;
 
@@ -85,6 +86,11 @@ export class P2PConnection {
         // @ts-ignore
         if (!serverStarted && !event.candidate.address.includes(':')) {
           serverStarted = this.initializeServer(event.candidate);
+          this.localClient = initializeLocalClient(
+            event.candidate.port.toString(),
+            // @ts-ignore
+            event.candidate.address.toString()
+          );
           jsonCandidate['grpcServer'] = true;
         }
         offerCandidates.add(jsonCandidate);
@@ -122,7 +128,7 @@ export class P2PConnection {
             const candidate = new wrtc.RTCIceCandidate(data);
             this.pc.addIceCandidate(candidate);
             if (data.grpcServer) {
-              this.client = initializeClient(data.port, data.ip);
+              this.remoteClient = initializeRemoteClient(data.port, data.ip);
             }
           }
         });
@@ -151,6 +157,11 @@ export class P2PConnection {
         // @ts-ignore
         if (!serverStarted && !event.candidate.address.includes(':')) {
           serverStarted = this.initializeServer(event.candidate);
+          this.localClient = initializeLocalClient(
+            event.candidate.port.toString(),
+            // @ts-ignore
+            event.candidate.address.toString()
+          );
           jsonCandidate['grpcServer'] = true;
         }
         answerCandidates.add(jsonCandidate);
@@ -180,7 +191,7 @@ export class P2PConnection {
             let data = change.doc.data();
             this.pc.addIceCandidate(new wrtc.RTCIceCandidate(data));
             if (data.grpcServer) {
-              this.client = initializeClient(data.port, data.ip);
+              this.remoteClient = initializeRemoteClient(data.port, data.ip);
             }
           }
         });
@@ -197,14 +208,18 @@ export class P2PConnection {
       candidate.port,
     ]);
     server.stdout.on('data', function (data: Buffer) {
-      console.log(data.toString());
+      console.log('Server Started: ', data.toString());
     });
     serverStarted = true;
     return serverStarted;
   };
 
-  getGRPCClient = (): AudioStreamClient => {
-    return this.client;
+  getLocalGRPCClient = (): AudioStreamClient => {
+    return this.localClient;
+  };
+
+  getRemoteGRPCClient = (): AudioStreamClient => {
+    return this.remoteClient;
   };
 
   getCallID = (): string => {

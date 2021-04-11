@@ -15,7 +15,6 @@ class App extends Component<any, any> {
 
   answer = () => {
     const callId = document.getElementById('callInput') as HTMLInputElement;
-    console.info(callId.value);
     ipcRenderer.send('answer', callId.value);
   };
 
@@ -25,6 +24,10 @@ class App extends Component<any, any> {
 
   stopaudiostream = () => {
     ipcRenderer.send('stop-audio-stream');
+  };
+
+  mutespeaker = (mute: boolean) => {
+    ipcRenderer.send('mute-speaker', mute);
   };
 
   onGainChangeHandler = (gainAmt: number) => {
@@ -39,6 +42,7 @@ class App extends Component<any, any> {
         <div className="buttons">
           <button onClick={() => this.startaudiostream()}>Start Stream</button>
           <button onClick={() => this.stopaudiostream()}>Stop Stream</button>
+          <button onClick={() => this.mutespeaker(true)}>Mute Speaker</button>
           <button onClick={() => this.call()}>Call</button>
           <button onClick={() => this.answer()}>Answer</button>
           <input id="callInput" />

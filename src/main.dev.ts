@@ -28,6 +28,7 @@ export default class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 let audiostreamer: InstanceType<typeof Audiostreamer> | null = null;
+let p2pconnection: InstanceType<typeof P2PConnection> | null = null;
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -136,19 +137,26 @@ app.on('activate', () => {
 });
 
 ipcMain.on('call', async () => {
-  const p2pconnection = new P2PConnection();
+  p2pconnection = new P2PConnection();
   await p2pconnection.call();
-  audiostreamer = new Audiostreamer(p2pconnection.getGRPCClient());
 });
 
 ipcMain.on('answer', async (_event, callId: string) => {
-  const p2pconnection = new P2PConnection();
+  p2pconnection = new P2PConnection();
   await p2pconnection.answer(callId);
-  //TODO look into starting another electron app on different port
-  audiostreamer = new Audiostreamer(p2pconnection.getGRPCClient());
+});
+
+ipcMain.on('mute-speaker', async (_event, mute: boolean) => {
+  audiostreamer.muteSpeaker(mute);
 });
 
 ipcMain.on('start-audio-stream', () => {
+  if (!audiostreamer) {
+    audiostreamer = new Audiostreamer(
+      p2pconnection.getLocalGRPCClient(),
+      p2pconnection.getRemoteGRPCClient()
+    );
+  }
   audiostreamer.startAudioStream();
 });
 

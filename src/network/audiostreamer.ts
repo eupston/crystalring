@@ -5,15 +5,20 @@ import { AudioIO, IoStreamRead, SampleFormat16Bit } from 'naudiodon';
 import Speaker from 'speaker';
 
 export class Audiostreamer {
-  private client: AudioStreamClient;
+  private localClient: AudioStreamClient;
+  private remoteClient: AudioStreamClient;
   private micStream: IoStreamRead;
   private outputStream: Speaker;
-  private clientStream: ClientDuplexStream<AudioSample, AudioSample>;
+  private localClientStream: ClientDuplexStream<AudioSample, AudioSample>;
+  private remoteClientStream: ClientDuplexStream<AudioSample, AudioSample>;
   private gainAmt: number;
+  private speakerMuted: boolean;
 
-  constructor(gRPCClient: AudioStreamClient) {
-    this.client = gRPCClient;
+  constructor(localClient: AudioStreamClient, remoteClient: AudioStreamClient) {
+    this.localClient = localClient;
+    this.remoteClient = remoteClient;
     this.gainAmt = 1.0;
+    this.speakerMuted = false;
   }
 
   reloadAudioIOStream = () => {
@@ -22,7 +27,8 @@ export class Audiostreamer {
   };
 
   initializeAudioIOStream = () => {
-    this.clientStream = this.client.audioStream();
+    this.localClientStream = this.localClient.audioStream();
+    this.remoteClientStream = this.remoteClient.audioStream();
     this.micStream = AudioIO({
       inOptions: {
         channelCount: 1,
@@ -48,7 +54,7 @@ export class Audiostreamer {
       sample.setData(data);
       sample.setGainamt(this.gainAmt);
       sample.setTimestamp(new Date().getMilliseconds().toString());
-      this.clientStream.write(sample);
+      this.localClientStream.write(sample);
     });
 
     this.micStream.on('error', (err) => {
@@ -59,10 +65,14 @@ export class Audiostreamer {
 
     //TODO handle errors when server not reachable
     //When servers sends back data pipe to the speaker
-    this.clientStream.on('data', (sample: AudioSample) => {
+    //TODO figure out why not recieving any data from remote server
+    this.remoteClientStream.on('data', (sample: AudioSample) => {
       let sampleData = sample.getData();
       if (sampleData.length > 0 && sample) {
-        this.outputStream.write(sample.getData());
+        if (!this.speakerMuted) {
+          console.info(sampleData);
+          this.outputStream.write(sampleData);
+        }
       }
     });
   };
@@ -87,5 +97,9 @@ export class Audiostreamer {
 
   setGainAmount = (gainamount: number) => {
     this.gainAmt = gainamount;
+  };
+
+  muteSpeaker = (mute: boolean) => {
+    this.speakerMuted = mute;
   };
 }
