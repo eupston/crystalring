@@ -15,12 +15,10 @@ func main() {
   PORT := flag.String("port", "9000", "Port to listen on.")
   IP := flag.String("ip", "0.0.0.0", "IP to listen on")
   flag.Parse()
-  fmt.Println("PORT:", *PORT)
-  fmt.Println("IP:", *IP)
-
-	lis, err := net.Listen(*IP, ":" + *PORT)
+  bindingAddress := *IP + ":" + *PORT
+	lis, err := net.Listen("tcp", bindingAddress)
 	if err != nil {
-		log.Fatalf("Failed to listen on port " + *PORT)
+		log.Fatalf("Failed to listen on address " + bindingAddress)
 	}
 
 	s := audiostreamer.Server{}
@@ -28,8 +26,8 @@ func main() {
 
 	pb.RegisterAudioStreamServer(grpcServer, &s)
 
-	log.Printf("Listening on port " + *PORT)
+	fmt.Println("Server Listening on Address: " + bindingAddress)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve grpc services over port " + *PORT)
+		log.Fatalf("failed to serve grpc services on " + bindingAddress)
 	}
 }
