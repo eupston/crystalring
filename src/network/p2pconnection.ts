@@ -208,7 +208,10 @@ export class P2PConnection {
       candidate.port,
     ]);
     server.stdout.on('data', function (data: Buffer) {
-      console.log('Server Started: ', data.toString());
+      console.log(data.toString());
+    });
+    server.stderr.on('data', function (data: Buffer) {
+      console.log(data.toString());
     });
     serverStarted = true;
     return serverStarted;

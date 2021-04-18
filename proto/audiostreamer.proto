@@ -12,4 +12,6 @@ message AudioSample {
   string Timestamp = 1;
   bytes Data = 2;
   float GainAmt = 3;
+  bool Broadcast = 4;
+  bool Listen = 5;
 }

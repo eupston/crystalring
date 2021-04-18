@@ -1,14 +1,14 @@
 package main
 
 import (
-	"log"
-	"net"
-	"flag"
-	"fmt"
-
-	pb "github.com/eupston/gRPC-Audio-Streaming-App/proto"
-	"github.com/eupston/gRPC-Audio-Streaming-App/server/services/audiostreamer"
-	"google.golang.org/grpc"
+  "flag"
+  "fmt"
+  pb "github.com/eupston/gRPC-Audio-Streaming-App/proto"
+  "github.com/eupston/gRPC-Audio-Streaming-App/server/services/audiostreamer"
+  "google.golang.org/grpc"
+  "log"
+  "net"
+  "sync"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 		log.Fatalf("Failed to listen on address " + bindingAddress)
 	}
 
-	s := audiostreamer.Server{}
+	s := audiostreamer.Server{  Clients: make(map[string]audiostreamer.Client), Mu: sync.RWMutex{}}
 	grpcServer := grpc.NewServer()
 
 	pb.RegisterAudioStreamServer(grpcServer, &s)

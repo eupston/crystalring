@@ -51,10 +51,18 @@ export class Audiostreamer {
     // 16Bit UNSIGNED int is between 0 - 65535
     let sample = new AudioSample();
     this.micStream.on('data', (data: Uint8Array) => {
+      //Create Writing stream
       sample.setData(data);
       sample.setGainamt(this.gainAmt);
+      sample.setBroadcast(true);
+      sample.setListen(false);
       sample.setTimestamp(new Date().getMilliseconds().toString());
       this.localClientStream.write(sample);
+      //Create listening stream
+      sample.setBroadcast(false);
+      sample.setListen(true);
+      sample.setData(new Uint8Array(0));
+      this.remoteClientStream.write(sample);
     });
 
     this.micStream.on('error', (err) => {
@@ -65,15 +73,18 @@ export class Audiostreamer {
 
     //TODO handle errors when server not reachable
     //When servers sends back data pipe to the speaker
-    //TODO figure out why not recieving any data from remote server
     this.remoteClientStream.on('data', (sample: AudioSample) => {
       let sampleData = sample.getData();
       if (sampleData.length > 0 && sample) {
         if (!this.speakerMuted) {
-          console.info(sampleData);
           this.outputStream.write(sampleData);
         }
       }
+    });
+
+    this.remoteClientStream.on('error', (e: any) => {
+      // An error has occurred and the stream has been closed.
+      console.info(e);
     });
   };
 

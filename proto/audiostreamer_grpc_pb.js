@@ -12,12 +12,11 @@ function serialize_audiostreamer_AudioSample(arg) {
 }
 
 function deserialize_audiostreamer_AudioSample(buffer_arg) {
-  return audiostreamer_pb.AudioSample.deserializeBinary(
-    new Uint8Array(buffer_arg)
-  );
+  return audiostreamer_pb.AudioSample.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-var AudioStreamService = (exports.AudioStreamService = {
+
+var AudioStreamService = exports.AudioStreamService = {
   audioStream: {
     path: '/audiostreamer.AudioStream/AudioStream',
     requestStream: true,
@@ -29,8 +28,6 @@ var AudioStreamService = (exports.AudioStreamService = {
     responseSerialize: serialize_audiostreamer_AudioSample,
     responseDeserialize: deserialize_audiostreamer_AudioSample,
   },
-});
+};
 
-exports.AudioStreamClient = grpc.makeGenericClientConstructor(
-  AudioStreamService
-);
+exports.AudioStreamClient = grpc.makeGenericClientConstructor(AudioStreamService);
