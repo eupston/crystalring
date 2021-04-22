@@ -13,5 +13,9 @@
     "postinstall": "yarn electron-rebuild"
   },
   "license": "MIT",
-  "dependencies": {}
+  "dependencies": {
+    "naudiodon": "^2.3.4",
+    "speaker": "^0.5.3",
+    "wrtc": "^0.4.7"
+  }
 }

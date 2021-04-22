@@ -44,7 +44,6 @@ func (s *Server) getClients() []Client {
   return cs
 }
 
-//TODO figure out how to intercept one clients stream and send to another
 func (s *Server) AudioStream(stream pb.AudioStream_AudioStreamServer) error {
   //Add client to Map for all connected clients
   uid := uuid.Must(uuid.NewRandom()).String()

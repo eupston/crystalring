@@ -200,6 +200,7 @@ export class P2PConnection {
 
   initializeServer = (candidate: RTCIceCandidate): boolean => {
     let serverStarted = false;
+    //TODO figure out how to dynamically build this into electron app
     const server = spawn('server/server', [
       '-ip',
       // @ts-ignore
