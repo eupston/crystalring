@@ -4,6 +4,9 @@ import { initializeRemoteClient, initializeLocalClient } from './client';
 import { AudioStreamClient } from '../../proto/audiostreamer_grpc_pb';
 const wrtc = require('wrtc');
 const { spawn } = require('child_process');
+import { execPath } from '../packaging/binaries';
+import { join as joinPath } from 'path';
+
 require('dotenv').config();
 
 export class P2PConnection {
@@ -200,8 +203,8 @@ export class P2PConnection {
 
   initializeServer = (candidate: RTCIceCandidate): boolean => {
     let serverStarted = false;
-    //TODO figure out how to dynamically build this into electron app
-    const server = spawn('server/server', [
+    const serverExec = `${joinPath(execPath, 'server')}`;
+    const server = spawn(serverExec, [
       '-ip',
       // @ts-ignore
       candidate.address,
