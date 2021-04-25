@@ -32,6 +32,7 @@ export class P2PConnection {
       appId: process.env.FIREBASE_APP_ID,
       measurementId: process.env.FIREBASE_MEASUREMENT_ID,
     };
+    console.info(firebaseConfig);
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }

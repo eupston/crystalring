@@ -1,5 +1,4 @@
 import { AudioStreamClient } from '../../proto/audiostreamer_grpc_pb';
-//TODO fix ReferenceError: XMLHttpRequest is not defined in prod, probably cause by GRPC
 import { credentials } from '@grpc/grpc-js';
 
 export const initializeRemoteClient = (port: string, IP: string) => {

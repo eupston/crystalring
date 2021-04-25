@@ -8,6 +8,7 @@
  * When running `yarn build` or `yarn build-main`, this file is compiled to
  * `./src/main.prod.js` using webpack. This gives us some performance wins.
  */
+global.XMLHttpRequest = require('xhr2');
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import path from 'path';
@@ -80,6 +81,7 @@ const createWindow = async () => {
       nodeIntegration: true,
       devTools: true,
       enableRemoteModule: true,
+      nativeWindowOpen: true,
     },
   });
 
