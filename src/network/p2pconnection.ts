@@ -1,42 +1,26 @@
-import firebase from 'firebase/app';
-import 'firebase/firestore';
 import { initializeRemoteClient, initializeLocalClient } from './client';
 import { AudioStreamClient } from '../../proto/audiostreamer_grpc_pb';
 const wrtc = require('wrtc');
 const { spawn } = require('child_process');
 import { execPath } from '../packaging/binaries';
 import { join as joinPath } from 'path';
+import { connectMongoDB } from '../db/dbConnection';
+const Call = require('../db/models/Calls');
 
 require('dotenv').config();
 
 export class P2PConnection {
-  private signalServer: firebase.firestore.Firestore;
   private remoteClient: AudioStreamClient;
   private localClient: AudioStreamClient;
   private callId: string;
   private pc: RTCPeerConnection;
 
   constructor() {
-    this.signalServer = this.initializeSignallingServer();
     this.pc = this.initializePeerConnection();
   }
 
-  initializeSignallingServer = (): firebase.firestore.Firestore => {
-    const firebaseConfig = {
-      apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      databaseURL: process.env.FIREBASE_DATABASE_URL,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGEBUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.FIREBASE_APP_ID,
-      measurementId: process.env.FIREBASE_MEASUREMENT_ID,
-    };
-    console.info(firebaseConfig);
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    return firebase.firestore();
+  initializeSignallingServer = async () => {
+    await connectMongoDB();
   };
 
   initializePeerConnection = (): RTCPeerConnection => {
@@ -68,12 +52,19 @@ export class P2PConnection {
     });
 
     // Reference Firestore collections for signaling
-    const callDoc = this.signalServer.collection('calls').doc();
-    const offerCandidates = callDoc.collection('offerCandidates');
-    const answerCandidates = callDoc.collection('answerCandidates');
+    // const callDoc = this.signalServer.collection('calls').doc();
+    // const offerCandidates = callDoc.collection('offerCandidates');
+    // const answerCandidates = callDoc.collection('answerCandidates');
+    const callDoc = await Call.create({ name: 'testcall' });
 
-    this.callId = callDoc.id;
+    this.callId = callDoc._id;
     console.info(this.callId);
+
+    // Create watch stream on document with the call Id created
+    const changeStream = Call.watch(
+      [{ $match: { 'fullDocument._id': { $eq: this.callId } } }],
+      { fullDocument: 'updateLookup' }
+    );
 
     // Get candidates for caller, save to db
     this.pc.onicecandidate = (event: { candidate: RTCIceCandidate }) => {
@@ -97,7 +88,7 @@ export class P2PConnection {
           );
           jsonCandidate['grpcServer'] = true;
         }
-        offerCandidates.add(jsonCandidate);
+        // offerCandidates.add(jsonCandidate);
       }
     };
 
@@ -112,40 +103,51 @@ export class P2PConnection {
       type: offerDescription.type,
     };
 
-    await callDoc.set({ offer });
-    // Listen for remote answer
-    callDoc.onSnapshot((snapshot: any) => {
-      const data = snapshot.data();
-      if (!this.pc.currentRemoteDescription && data?.answer) {
-        const answerDescription = new wrtc.RTCSessionDescription(data.answer);
-        this.pc.setRemoteDescription(answerDescription);
-      }
+    changeStream.on('change', function (change: any): any {
+      console.log('Call Document CHANGED');
+      console.info(JSON.stringify(change.fullDocument));
+      initializeRemoteClient('', '');
     });
 
+    await callDoc.set({ offer });
+
+    //TODO update firebase db listeners with mongodb listener
+
+    // Listen for remote answer
+    // callDoc.onSnapshot((snapshot: any) => {
+    //   const data = snapshot.data();
+    //   if (!this.pc.currentRemoteDescription && data?.answer) {
+    //     const answerDescription = new wrtc.RTCSessionDescription(data.answer);
+    //     this.pc.setRemoteDescription(answerDescription);
+    //   }
+    // });
+
     // When answered, add candidate to peer connection
-    answerCandidates.onSnapshot((snapshot: any) => {
-      snapshot
-        .docChanges()
-        .forEach((change: firebase.firestore.DocumentData) => {
-          if (change.type === 'added') {
-            let data = change.doc.data();
-            const candidate = new wrtc.RTCIceCandidate(data);
-            this.pc.addIceCandidate(candidate);
-            if (data.grpcServer) {
-              this.remoteClient = initializeRemoteClient(data.port, data.ip);
-            }
-          }
-        });
-    });
+    // answerCandidates.onSnapshot((snapshot: any) => {
+    //   snapshot
+    //     .docChanges()
+    //     .forEach((change: firebase.firestore.DocumentData) => {
+    //       if (change.type === 'added') {
+    //         let data = change.doc.data();
+    //         const candidate = new wrtc.RTCIceCandidate(data);
+    //         this.pc.addIceCandidate(candidate);
+    //         if (data.grpcServer) {
+    //           this.remoteClient = initializeRemoteClient(data.port, data.ip);
+    //         }
+    //       }
+    //     });
+    // });
   };
 
   // 3. Answer the call with the unique ID
   answer = async (callId: string) => {
     let serverStarted: boolean = false;
 
-    const callDoc = this.signalServer.collection('calls').doc(callId);
-    const answerCandidates = callDoc.collection('answerCandidates');
-    const offerCandidates = callDoc.collection('offerCandidates');
+    // const callDoc = this.signalServer.collection('calls').doc(callId);
+    // const answerCandidates = callDoc.collection('answerCandidates');
+    // const offerCandidates = callDoc.collection('offerCandidates');
+
+    const callDoc = await Call.findById(callId);
 
     this.pc.onicecandidate = (event: { candidate: RTCIceCandidate }) => {
       if (event.candidate) {
@@ -168,7 +170,7 @@ export class P2PConnection {
           );
           jsonCandidate['grpcServer'] = true;
         }
-        answerCandidates.add(jsonCandidate);
+        // answerCandidates.add(jsonCandidate);
       }
     };
     const callData = (await callDoc.get()).data();
@@ -187,19 +189,19 @@ export class P2PConnection {
 
     await callDoc.update({ answer });
 
-    offerCandidates.onSnapshot((snapshot: any) => {
-      snapshot
-        .docChanges()
-        .forEach((change: firebase.firestore.DocumentData) => {
-          if (change.type === 'added') {
-            let data = change.doc.data();
-            this.pc.addIceCandidate(new wrtc.RTCIceCandidate(data));
-            if (data.grpcServer) {
-              this.remoteClient = initializeRemoteClient(data.port, data.ip);
-            }
-          }
-        });
-    });
+    // offerCandidates.onSnapshot((snapshot: any) => {
+    //   snapshot
+    //     .docChanges()
+    //     .forEach((change: firebase.firestore.DocumentData) => {
+    //       if (change.type === 'added') {
+    //         let data = change.doc.data();
+    //         this.pc.addIceCandidate(new wrtc.RTCIceCandidate(data));
+    //         if (data.grpcServer) {
+    //           this.remoteClient = initializeRemoteClient(data.port, data.ip);
+    //         }
+    //       }
+    //     });
+    // });
   };
 
   initializeServer = (candidate: RTCIceCandidate): boolean => {

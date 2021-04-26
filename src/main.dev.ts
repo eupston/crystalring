@@ -141,11 +141,13 @@ app.on('activate', () => {
 
 ipcMain.on('call', async () => {
   p2pconnection = new P2PConnection();
+  await p2pconnection.initializeSignallingServer();
   await p2pconnection.call();
 });
 
 ipcMain.on('answer', async (_event, callId: string) => {
   p2pconnection = new P2PConnection();
+  await p2pconnection.initializeSignallingServer();
   await p2pconnection.answer(callId);
 });
 
