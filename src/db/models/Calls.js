@@ -13,11 +13,11 @@ const CallSchema = new mongoose.Schema({
     unique: true,
   },
   answerCandidates: {
-    type: Object,
+    type: Array,
     unique: true,
   },
   offerCandidates: {
-    type: Object,
+    type: Array,
     unique: true,
   },
   createdAt: {

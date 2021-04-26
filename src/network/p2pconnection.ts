@@ -7,6 +7,7 @@ import { join as joinPath } from 'path';
 import { connectMongoDB } from '../db/dbConnection';
 const Call = require('../db/models/Calls');
 
+//TODO figure out how to embed environment variables in prod
 require('dotenv').config();
 
 export class P2PConnection {
@@ -51,23 +52,37 @@ export class P2PConnection {
       this.pc.addTrack(track, localStream);
     });
 
-    // Reference Firestore collections for signaling
-    // const callDoc = this.signalServer.collection('calls').doc();
-    // const offerCandidates = callDoc.collection('offerCandidates');
-    // const answerCandidates = callDoc.collection('answerCandidates');
+    // Reference Mongodb collection for signaling
     const callDoc = await Call.create({ name: 'testcall' });
-
     this.callId = callDoc._id;
     console.info(this.callId);
 
     // Create watch stream on document with the call Id created
-    const changeStream = Call.watch(
+    const callDocChangeStream = Call.watch(
       [{ $match: { 'fullDocument._id': { $eq: this.callId } } }],
       { fullDocument: 'updateLookup' }
     );
 
+    // const answerCandidatesChangeStream = Call.watch(
+    //   [
+    //     {
+    //       $match: {
+    //         $and: [
+    //           { 'fullDocument._id': { $eq: this.callId } },
+    //           {
+    //             'updateDescription.updatedFields.answerCandidates': {
+    //               $exists: true,
+    //             },
+    //           },
+    //         ],
+    //       },
+    //     },
+    //   ],
+    //   { fullDocument: 'updateLookup' }
+    // );
+
     // Get candidates for caller, save to db
-    this.pc.onicecandidate = (event: { candidate: RTCIceCandidate }) => {
+    this.pc.onicecandidate = async (event: { candidate: RTCIceCandidate }) => {
       if (event.candidate) {
         const jsonCandidate = {
           candidate: event.candidate.candidate,
@@ -88,7 +103,9 @@ export class P2PConnection {
           );
           jsonCandidate['grpcServer'] = true;
         }
-        // offerCandidates.add(jsonCandidate);
+        const call = await Call.findById(this.callId);
+        call.offerCandidates.push(jsonCandidate);
+        call.save();
       }
     };
 
@@ -103,53 +120,42 @@ export class P2PConnection {
       type: offerDescription.type,
     };
 
-    changeStream.on('change', function (change: any): any {
-      console.log('Call Document CHANGED');
-      console.info(JSON.stringify(change.fullDocument));
-      initializeRemoteClient('', '');
-    });
-
-    await callDoc.set({ offer });
-
-    //TODO update firebase db listeners with mongodb listener
+    await callDoc.update({ offer: offer });
 
     // Listen for remote answer
-    // callDoc.onSnapshot((snapshot: any) => {
-    //   const data = snapshot.data();
-    //   if (!this.pc.currentRemoteDescription && data?.answer) {
-    //     const answerDescription = new wrtc.RTCSessionDescription(data.answer);
-    //     this.pc.setRemoteDescription(answerDescription);
-    //   }
-    // });
+    callDocChangeStream.on('change', (change: any) => {
+      const data = change.fullDocument;
+      if (!this.pc.currentRemoteDescription && data?.answer) {
+        const answerDescription = new wrtc.RTCSessionDescription(data.answer);
+        this.pc.setRemoteDescription(answerDescription);
+      }
+    });
 
     // When answered, add candidate to peer connection
-    // answerCandidates.onSnapshot((snapshot: any) => {
-    //   snapshot
-    //     .docChanges()
-    //     .forEach((change: firebase.firestore.DocumentData) => {
-    //       if (change.type === 'added') {
-    //         let data = change.doc.data();
-    //         const candidate = new wrtc.RTCIceCandidate(data);
-    //         this.pc.addIceCandidate(candidate);
-    //         if (data.grpcServer) {
-    //           this.remoteClient = initializeRemoteClient(data.port, data.ip);
-    //         }
-    //       }
-    //     });
-    // });
+    callDocChangeStream.on('change', (change: any) => {
+      const answerCandidates = change.fullDocument.answerCandidates;
+      answerCandidates.forEach((answerCandidate: any) => {
+        const candidate = new wrtc.RTCIceCandidate(answerCandidate);
+        this.pc.addIceCandidate(candidate);
+        if (answerCandidate.grpcServer) {
+          //TODO ensure only listening to changes on answercandidates and only iternate through document if haven't already
+          this.remoteClient = initializeRemoteClient(
+            answerCandidate.port,
+            answerCandidate.ip
+          );
+        }
+      });
+    });
   };
 
   // 3. Answer the call with the unique ID
   answer = async (callId: string) => {
     let serverStarted: boolean = false;
 
-    // const callDoc = this.signalServer.collection('calls').doc(callId);
-    // const answerCandidates = callDoc.collection('answerCandidates');
-    // const offerCandidates = callDoc.collection('offerCandidates');
-
     const callDoc = await Call.findById(callId);
+    this.callId = callId;
 
-    this.pc.onicecandidate = (event: { candidate: RTCIceCandidate }) => {
+    this.pc.onicecandidate = async (event: { candidate: RTCIceCandidate }) => {
       if (event.candidate) {
         const jsonCandidate = {
           candidate: event.candidate.candidate,
@@ -170,11 +176,12 @@ export class P2PConnection {
           );
           jsonCandidate['grpcServer'] = true;
         }
-        // answerCandidates.add(jsonCandidate);
+        const call = await Call.findById(this.callId);
+        call.answerCandidates.push(jsonCandidate);
+        call.save();
       }
     };
-    const callData = (await callDoc.get()).data();
-    const offerDescription = callData.offer;
+    const offerDescription = callDoc.offer;
 
     await this.pc.setRemoteDescription(
       new wrtc.RTCSessionDescription(offerDescription)
@@ -187,21 +194,45 @@ export class P2PConnection {
       sdp: answerDescription.sdp,
     };
 
-    await callDoc.update({ answer });
+    await callDoc.update({ answer: answer });
 
-    // offerCandidates.onSnapshot((snapshot: any) => {
-    //   snapshot
-    //     .docChanges()
-    //     .forEach((change: firebase.firestore.DocumentData) => {
-    //       if (change.type === 'added') {
-    //         let data = change.doc.data();
-    //         this.pc.addIceCandidate(new wrtc.RTCIceCandidate(data));
-    //         if (data.grpcServer) {
-    //           this.remoteClient = initializeRemoteClient(data.port, data.ip);
-    //         }
-    //       }
-    //     });
-    // });
+    // const offerCandidatesChangeStream = Call.watch(
+    //   [
+    //     {
+    //       $match: {
+    //         $and: [
+    //           { 'fullDocument._id': { $eq: this.callId } },
+    //           {
+    //             'updateDescription.updatedFields.offerCandidates': {
+    //               $exists: true,
+    //             },
+    //           },
+    //         ],
+    //       },
+    //     },
+    //   ],
+    //   { fullDocument: 'updateLookup' }
+    // );
+
+    const callDocChangeStream = Call.watch(
+      [{ $match: { 'fullDocument._id': { $eq: this.callId } } }],
+      { fullDocument: 'updateLookup' }
+    );
+    // When offers available, add candidate to peer connection
+    //TODO figure out why not getting any change callbacks here
+    callDocChangeStream.on('change', (change: any) => {
+      const offerCandidates = change.fullDocument.answerCandidates;
+      offerCandidates.forEach((offerCandidate: any) => {
+        const candidate = new wrtc.RTCIceCandidate(offerCandidate);
+        this.pc.addIceCandidate(candidate);
+        if (offerCandidate.grpcServer) {
+          this.remoteClient = initializeRemoteClient(
+            offerCandidate.port,
+            offerCandidate.ip
+          );
+        }
+      });
+    });
   };
 
   initializeServer = (candidate: RTCIceCandidate): boolean => {
