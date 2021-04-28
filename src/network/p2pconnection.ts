@@ -15,9 +15,11 @@ export class P2PConnection {
   private localClient: AudioStreamClient;
   private callId: string;
   private pc: RTCPeerConnection;
+  private answerCandidatesArrChuckLength: number;
 
   constructor() {
     this.pc = this.initializePeerConnection();
+    this.answerCandidatesArrChuckLength = 0;
   }
 
   initializeSignallingServer = async () => {
@@ -63,23 +65,23 @@ export class P2PConnection {
       { fullDocument: 'updateLookup' }
     );
 
-    // const answerCandidatesChangeStream = Call.watch(
-    //   [
-    //     {
-    //       $match: {
-    //         $and: [
-    //           { 'fullDocument._id': { $eq: this.callId } },
-    //           {
-    //             'updateDescription.updatedFields.answerCandidates': {
-    //               $exists: true,
-    //             },
-    //           },
-    //         ],
-    //       },
-    //     },
-    //   ],
-    //   { fullDocument: 'updateLookup' }
-    // );
+    const answerCandidatesChangeStream = Call.watch(
+      [
+        {
+          $match: {
+            $and: [
+              { 'fullDocument._id': { $eq: this.callId } },
+              {
+                $expr: {
+                  $gt: [{ $size: '$fullDocument.answerCandidates' }, 0],
+                },
+              },
+            ],
+          },
+        },
+      ],
+      { fullDocument: 'updateLookup' }
+    );
 
     // Get candidates for caller, save to db
     this.pc.onicecandidate = async (event: { candidate: RTCIceCandidate }) => {
@@ -132,13 +134,19 @@ export class P2PConnection {
     });
 
     // When answered, add candidate to peer connection
-    callDocChangeStream.on('change', (change: any) => {
+    answerCandidatesChangeStream.on('change', (change: any) => {
       const answerCandidates = change.fullDocument.answerCandidates;
-      answerCandidates.forEach((answerCandidate: any) => {
+      const prevAnswerCandidatesArrChuckLength = this
+        .answerCandidatesArrChuckLength;
+      this.answerCandidatesArrChuckLength = answerCandidates.length;
+      const answerCandidatesChuck = answerCandidates.slice(
+        prevAnswerCandidatesArrChuckLength,
+        this.answerCandidatesArrChuckLength + 1
+      );
+      answerCandidatesChuck.forEach((answerCandidate: any) => {
         const candidate = new wrtc.RTCIceCandidate(answerCandidate);
         this.pc.addIceCandidate(candidate);
         if (answerCandidate.grpcServer) {
-          //TODO ensure only listening to changes on answercandidates and only iternate through document if haven't already
           this.remoteClient = initializeRemoteClient(
             answerCandidate.port,
             answerCandidate.ip
@@ -196,42 +204,16 @@ export class P2PConnection {
 
     await callDoc.update({ answer: answer });
 
-    // const offerCandidatesChangeStream = Call.watch(
-    //   [
-    //     {
-    //       $match: {
-    //         $and: [
-    //           { 'fullDocument._id': { $eq: this.callId } },
-    //           {
-    //             'updateDescription.updatedFields.offerCandidates': {
-    //               $exists: true,
-    //             },
-    //           },
-    //         ],
-    //       },
-    //     },
-    //   ],
-    //   { fullDocument: 'updateLookup' }
-    // );
-
-    const callDocChangeStream = Call.watch(
-      [{ $match: { 'fullDocument._id': { $eq: this.callId } } }],
-      { fullDocument: 'updateLookup' }
-    );
-    // When offers available, add candidate to peer connection
-    //TODO figure out why not getting any change callbacks here
-    callDocChangeStream.on('change', (change: any) => {
-      const offerCandidates = change.fullDocument.answerCandidates;
-      offerCandidates.forEach((offerCandidate: any) => {
-        const candidate = new wrtc.RTCIceCandidate(offerCandidate);
-        this.pc.addIceCandidate(candidate);
-        if (offerCandidate.grpcServer) {
-          this.remoteClient = initializeRemoteClient(
-            offerCandidate.port,
-            offerCandidate.ip
-          );
-        }
-      });
+    const offerCandidates = callDoc.offerCandidates;
+    offerCandidates.forEach((offerCandidate: any) => {
+      const candidate = new wrtc.RTCIceCandidate(offerCandidate);
+      this.pc.addIceCandidate(candidate);
+      if (offerCandidate.grpcServer) {
+        this.remoteClient = initializeRemoteClient(
+          offerCandidate.port,
+          offerCandidate.ip
+        );
+      }
     });
   };
 
