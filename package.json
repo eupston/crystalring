@@ -1,6 +1,6 @@
 {
-  "name": "gRPC-Audio-Streaming-App",
-  "productName": "gRPC-Audio-Streaming",
+  "name": "CrystalRing",
+  "productName": "CrystalRing",
   "description": "A GRPC bi-directional streaming app that adjusts and returns the gain of an incoming audio signal.",
   "scripts": {
     "build": "concurrently \"yarn build:main\" \"yarn build:renderer\"",
@@ -35,8 +35,8 @@
     ]
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "CrystalRing",
+    "appId": "org.erb.CrystalRing",
     "files": [
       "dist/",
       "node_modules/",
@@ -116,9 +116,7 @@
     "url": "git+https://github.com/electron-react-boilerplate/electron-react-boilerplate.git"
   },
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
-    "url": "https://electron-react-boilerplate.js.org"
+    "name": "Eugene Upston"
   },
   "license": "MIT",
   "bugs": {
