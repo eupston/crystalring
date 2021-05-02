@@ -6,19 +6,15 @@ const CallSchema = new mongoose.Schema({
   },
   answer: {
     type: Object,
-    unique: true,
   },
   offer: {
     type: Object,
-    unique: true,
   },
   answerCandidates: {
     type: Array,
-    unique: true,
   },
   offerCandidates: {
     type: Array,
-    unique: true,
   },
   createdAt: {
     type: Date,

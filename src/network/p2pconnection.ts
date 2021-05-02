@@ -2,13 +2,17 @@ import { initializeRemoteClient, initializeLocalClient } from './client';
 import { AudioStreamClient } from '../../proto/audiostreamer_grpc_pb';
 const wrtc = require('wrtc');
 const { spawn } = require('child_process');
-import { execPath } from '../packaging/binaries';
+import { binPath } from '../packaging/binaries';
+import appRootDir from 'app-root-dir';
 import { join as joinPath } from 'path';
 import { connectMongoDB } from '../db/dbConnection';
 const Call = require('../db/models/Calls');
 
-//TODO figure out how to embed environment variables in prod
-require('dotenv').config();
+const envPath =
+  process.env.NODE_ENV === 'production'
+    ? joinPath(appRootDir.get(), '.env')
+    : '.env';
+require('dotenv').config({ path: envPath });
 
 export class P2PConnection {
   private remoteClient: AudioStreamClient;
@@ -219,7 +223,7 @@ export class P2PConnection {
 
   initializeServer = (candidate: RTCIceCandidate): boolean => {
     let serverStarted = false;
-    const serverExec = `${joinPath(execPath, 'server')}`;
+    const serverExec = `${joinPath(binPath, 'server')}`;
     const server = spawn(serverExec, [
       '-ip',
       // @ts-ignore
