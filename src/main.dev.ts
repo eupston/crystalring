@@ -159,7 +159,8 @@ ipcMain.on('start-audio-stream', () => {
   if (!audiostreamer) {
     audiostreamer = new Audiostreamer(
       p2pconnection.getLocalGRPCClient(),
-      p2pconnection.getRemoteGRPCClient()
+      p2pconnection.getRemoteGRPCClient(),
+      p2pconnection.getLocalGRPCServer()
     );
   }
   audiostreamer.startAudioStream();
@@ -167,6 +168,8 @@ ipcMain.on('start-audio-stream', () => {
 
 ipcMain.on('stop-audio-stream', () => {
   audiostreamer.stopAudioStream();
+  p2pconnection = null;
+  audiostreamer = null;
 });
 
 ipcMain.on('set-gain-amount', (_event, gainAmt: number) => {

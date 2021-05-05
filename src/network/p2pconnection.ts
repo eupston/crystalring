@@ -6,6 +6,7 @@ import { binPath } from '../packaging/binaries';
 import appRootDir from 'app-root-dir';
 import { join as joinPath } from 'path';
 import { connectMongoDB } from '../db/dbConnection';
+import { ChildProcessWithoutNullStreams } from 'child_process';
 const Call = require('../db/models/Calls');
 
 const envPath =
@@ -17,6 +18,7 @@ require('dotenv').config({ path: envPath });
 export class P2PConnection {
   private remoteClient: AudioStreamClient;
   private localClient: AudioStreamClient;
+  private localServer: ChildProcessWithoutNullStreams;
   private callId: string;
   private pc: RTCPeerConnection;
   private answerCandidatesArrChuckLength: number;
@@ -150,6 +152,7 @@ export class P2PConnection {
       answerCandidatesChuck.forEach((answerCandidate: any) => {
         const candidate = new wrtc.RTCIceCandidate(answerCandidate);
         this.pc.addIceCandidate(candidate);
+        //If grpc server is hosted on candidate connect to it as client
         if (answerCandidate.grpcServer) {
           this.remoteClient = initializeRemoteClient(
             answerCandidate.port,
@@ -224,17 +227,17 @@ export class P2PConnection {
   initializeServer = (candidate: RTCIceCandidate): boolean => {
     let serverStarted = false;
     const serverExec = `${joinPath(binPath, 'server')}`;
-    const server = spawn(serverExec, [
+    this.localServer = spawn(serverExec, [
       '-ip',
       // @ts-ignore
       candidate.address,
       '-port',
       candidate.port,
     ]);
-    server.stdout.on('data', function (data: Buffer) {
+    this.localServer.stdout.on('data', function (data: Buffer) {
       console.log(data.toString());
     });
-    server.stderr.on('data', function (data: Buffer) {
+    this.localServer.on('data', function (data: Buffer) {
       console.log(data.toString());
     });
     serverStarted = true;
@@ -243,6 +246,10 @@ export class P2PConnection {
 
   getLocalGRPCClient = (): AudioStreamClient => {
     return this.localClient;
+  };
+
+  getLocalGRPCServer = (): ChildProcessWithoutNullStreams => {
+    return this.localServer;
   };
 
   getRemoteGRPCClient = (): AudioStreamClient => {
