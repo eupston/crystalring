@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import './App.global.css';
 import GainSlider from './Components/GainSlider/GainSlider';
+import { IpcRendererEvent } from 'electron';
 const { ipcRenderer } = window.require('electron');
 
 class App extends Component<any, any> {
@@ -11,6 +12,10 @@ class App extends Component<any, any> {
 
   call = () => {
     ipcRenderer.send('call');
+    ipcRenderer.on('call-id', (_event: IpcRendererEvent, callId: string) => {
+      const callIdElem = document.getElementById('callId') as HTMLInputElement;
+      callIdElem.value = callId;
+    });
   };
 
   answer = () => {
@@ -44,6 +49,7 @@ class App extends Component<any, any> {
           <button onClick={() => this.stopaudiostream()}>Stop Stream</button>
           <button onClick={() => this.mutespeaker(true)}>Mute Speaker</button>
           <button onClick={() => this.call()}>Call</button>
+          <input id="callId" />
           <button onClick={() => this.answer()}>Answer</button>
           <input id="callInput" />
         </div>

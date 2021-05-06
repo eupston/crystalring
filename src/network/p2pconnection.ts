@@ -257,6 +257,6 @@ export class P2PConnection {
   };
 
   getCallID = (): string => {
-    return this.callId;
+    return this.callId.toString();
   };
 }

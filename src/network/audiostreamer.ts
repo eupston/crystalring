@@ -12,7 +12,7 @@ export class Audiostreamer {
   private micStream: IoStreamRead;
   private outputStream: Speaker;
   private localClientStream: ClientDuplexStream<AudioSample, AudioSample>;
-  private remoteClientStream: ClientDuplexStream<AudioSample, AudioSample>;
+  public remoteClientStream: ClientDuplexStream<AudioSample, AudioSample>;
   private gainAmt: number;
   private speakerMuted: boolean;
 
@@ -65,9 +65,9 @@ export class Audiostreamer {
 
     this.micStream.on('error', (err) => {
       //try to restart mic stream if any errors
-      //TODO ensure this doesn't hang
       console.error('micStream error: ', err);
-      this.startMicStream();
+      //TODO ensure this doesn't hang
+      // this.startMicStream();
     });
   };
 
@@ -98,11 +98,18 @@ export class Audiostreamer {
       // An error has occurred and the stream has been closed.
       console.info('remoteClientStream ', e.message);
       if (e.message.includes('Connection dropped')) {
-        this.stopAudioStream();
+        this.remoteClientStream.end();
+        return;
       }
       //TODO investigate error: 1 CANCELLED: Cancelled on client on app that initiates dropping call
       else if (e.message.includes('Cancelled on client')) {
+        return;
       }
+    });
+
+    this.remoteClientStream.on('end', () => {
+      console.info('remoteClientStream ending');
+      this.stopAudioStream();
     });
   };
 
@@ -120,7 +127,6 @@ export class Audiostreamer {
       this.micStream.quit();
       this.outputStream.close(true);
       this.localClientStream.cancel();
-      this.remoteClientStream.cancel();
       this.localServer.kill();
       this.micStream = null;
       this.outputStream = null;

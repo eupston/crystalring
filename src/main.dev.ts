@@ -139,10 +139,12 @@ app.on('activate', () => {
   if (mainWindow === null) createWindow();
 });
 
-ipcMain.on('call', async () => {
+ipcMain.on('call', async (event, _args) => {
   p2pconnection = new P2PConnection();
   await p2pconnection.initializeSignallingServer();
   await p2pconnection.call();
+  const callId = p2pconnection.getCallID();
+  event.sender.send('call-id', callId);
 });
 
 ipcMain.on('answer', async (_event, callId: string) => {
@@ -167,7 +169,7 @@ ipcMain.on('start-audio-stream', () => {
 });
 
 ipcMain.on('stop-audio-stream', () => {
-  audiostreamer.stopAudioStream();
+  audiostreamer.remoteClientStream.end();
   p2pconnection = null;
   audiostreamer = null;
 });
